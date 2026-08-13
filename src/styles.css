@@ -325,9 +325,9 @@ button {
 }
 
 .plan-macros {
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
   align-items: center;
 }
 
@@ -346,9 +346,17 @@ button {
 .plan-card .header-row .title strong {
   font-size: 1.06rem;
 }
+.calorie-display {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 110px;
+}
 .calorie-display span {
-  font-weight: 800;
+  font-weight: 900;
   color: var(--text);
+  font-size: 1.02rem;
+  white-space: nowrap;
 }
 
 .plan-card .header-row .title {
@@ -357,8 +365,16 @@ button {
 
 .plan-card .pick-controls {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
+}
+.plan-card .pick-controls label {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.plan-card .pick-controls select {
+  width: 100%;
 }
 
 .plan-card .food-list {
@@ -427,15 +443,18 @@ button {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  text-align: left;
+  text-align: center;
+  align-items: center;
 }
 .plan-macros .macro-item strong {
   color: var(--text);
-  font-size: 1.02rem;
+  font-size: 1.04rem;
+  font-weight: 900;
+  white-space: nowrap;
 }
 .plan-macros .macro-item small {
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
 }
 
 .food-list {
@@ -576,10 +595,10 @@ body.theme-dark {
   --bg-start: #071425;
   --bg-end: #071628;
   --card-bg: #0b1220;
-  --surface: rgba(255,255,255,0.02);
-  --surface-start: rgba(255,255,255,0.02);
-  --surface-end: rgba(255,255,255,0.03);
-  --input-bg: rgba(255,255,255,0.02);
+  --surface: rgba(255,255,255,0.03);
+  --surface-start: rgba(255,255,255,0.03);
+  --surface-end: rgba(255,255,255,0.045);
+  --input-bg: rgba(255,255,255,0.03);
   --muted: #94a3b8;
   --muted-strong: #cbd5e1;
   --muted-weak: #94a3b8;
@@ -587,7 +606,7 @@ body.theme-dark {
   --danger: #fca5a5;
   --card-border: rgba(255,255,255,0.04);
   --accent: #34d399;
-  --text: #f1f8ff;
+  --text: #ffffff;
   --primary: linear-gradient(135deg,#06b6d4 0%,#8b5cf6 100%);
   color-scheme: dark;
 }
@@ -633,6 +652,32 @@ body.theme-dark select {
   border: 1px solid rgba(255,255,255,0.03);
 }
 
+/* tighten dropdown and pick control spacing */
+.plan-card .pick-controls label,
+.plan-card .pick-controls select {
+  width: 100%;
+}
+.plan-card .pick-controls {
+  gap: 10px;
+}
+
+/* emphasize calorie numbers and align blocks */
+.calorie-display span {
+  font-weight: 900;
+  color: var(--text);
+  font-size: 1rem;
+}
+.plan-macros .macro-item strong {
+  font-weight: 900;
+  font-size: 1.06rem;
+}
+
+/* ensure selects and inputs show white text in dark mode */
+body.theme-dark input,
+body.theme-dark select {
+  color: var(--text);
+}
+
 body.theme-dark .primary-button {
   box-shadow: 0 8px 30px rgba(124,58,237,0.16);
 }
@@ -672,4 +717,120 @@ body.theme-dark {
   --surface: rgba(255,255,255,0.03);
   --surface-start: rgba(255,255,255,0.03);
   --surface-end: rgba(255,255,255,0.035);
+}
+
+/* --- Plan card redesign: clearer hierarchy and spacing --- */
+.plan-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.plan-card {
+  padding: 20px 18px 18px;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto;
+  gap: 12px;
+  min-height: 240px;
+}
+
+.plan-card .header-row {
+  align-items: center;
+}
+
+.plan-card .header-row .title strong {
+  font-size: 1.12rem;
+}
+
+.plan-card .subtitle {
+  color: var(--muted-weak);
+  font-size: 0.92rem;
+  margin-top: 4px;
+}
+
+.plan-card .pick-controls {
+  gap: 10px;
+}
+.plan-card .pick-controls label {
+  display: block;
+}
+.plan-card .pick-controls select {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.015);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.plan-card .food-list li {
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.calorie-display span {
+  font-size: 1.18rem;
+  font-weight: 900;
+}
+
+.plan-macros.macros-small .macro-item strong {
+  font-size: 1.02rem;
+}
+
+/* mobile small adjustments */
+@media (max-width: 640px) {
+  .plan-grid {
+    grid-template-columns: 1fr;
+  }
+  .plan-card {
+    min-height: auto;
+    grid-template-rows: auto auto auto auto auto;
+  }
+  .calorie-display {
+    justify-content: flex-start;
+  }
+}
+
+/* Additional overrides to improve plan card UX and prevent overlaps */
+.plan-card .header-row .title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.plan-card .header-row .title strong {
+  white-space: nowrap;
+  display: block;
+}
+.plan-card {
+  z-index: 1;
+  padding-bottom: 22px;
+}
+.plan-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 28px rgba(2,6,23,0.06);
+  z-index: 3;
+}
+
+/* calories row stays inline and won't wrap into multiple lines */
+.plan-macros:not(.macros-small) {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* compact P/C/F row */
+.plan-macros.macros-small {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  align-items: center;
+}
+
+/* ensure selects don't cause layout shifts and cards overlap */
+.plan-card .pick-controls select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* when a select is open, we raise card above neighbors to avoid visual clipping */
+.plan-card:focus-within {
+  z-index: 4;
 }
