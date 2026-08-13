@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { foodDatabase as rawFoodDatabase } from './foodData';
 
 const activityLevels = [
@@ -32,6 +32,29 @@ const foodDatabase = rawFoodDatabase.map((f) => ({
 }));
 
 export default function App() {
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    setTheme(next);
+    localStorage.setItem('theme', next);
+  };
+
+  // apply theme class to document
+  useEffect(() => {
+    // toggle class on body so CSS selectors using body.theme-dark apply correctly
+    document.body.classList.toggle('theme-dark', theme === 'dark');
+  }, [theme]);
+
+  const accentColors = ['#06b6d4', '#7c3aed', '#fb7185', '#f59e0b'];
+
+  const demoStart = () => {
+    // quick demo: set common profile then generate plan
+    setProfile((p) => ({ ...p, age: 28, sex: 'female', weight: 68, height: 172 }));
+    setMacroRatio({ protein: 30, carbs: 45, fat: 25 });
+    setTimeout(() => generateNutritionPlan(), 80);
+    window.scrollTo({ top: 600, behavior: 'smooth' });
+  };
   const [profile, setProfile] = useState({
     age: 30,
     sex: 'female',
@@ -48,6 +71,9 @@ export default function App() {
   const [selectedFood, setSelectedFood] = useState('');
   const [items, setItems] = useState([]);
   const [nutritionPlan, setNutritionPlan] = useState([]);
+  const [mealModal, setMealModal] = useState({ open: false, index: null });
+  const [modalSelectedFood, setModalSelectedFood] = useState('');
+  const [modalGrams, setModalGrams] = useState(100);
 
   const roundValue = (value) => Math.round(value);
 
@@ -101,6 +127,9 @@ export default function App() {
       return plan;
     });
   };
+
+  const openMealModal = (index) => setMealModal({ open: true, index });
+  const closeMealModal = () => setMealModal({ open: false, index: null });
 
   const removeMealFood = (index, foodIdx) => {
     setNutritionPlan((prev) => {
@@ -265,11 +294,34 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <nav className="top-nav">
+        <div className="brand">
+          <div className="logo">NA</div>
+          <div>
+            <div className="brand-title">Nutrition & Assessment</div>
+            <div className="brand-sub">Calculator</div>
+          </div>
+        </div>
+        <div className="nav-actions">
+          <button className="secondary-button" onClick={toggleTheme} aria-label="Toggle theme">
+            {theme === 'light' ? 'Dark' : 'Light'}
+          </button>
+          <button className="primary-button" onClick={demoStart} style={{ marginLeft: 10 }}>
+            Try demo
+          </button>
+        </div>
+      </nav>
+
       <header className="hero">
         <div>
           <span className="eyebrow">Nutrition</span>
           <h1>Assessment Calculator</h1>
-          <p>Minimal web design for body metrics and food tracking.</p>
+          <p>Smart daily plans, simple tracking, and clear targets — made for your customers.</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="secondary-button" onClick={demoStart} aria-label="Start demo">
+            Start Demo
+          </button>
         </div>
         <div className="hero-overview">
           <div>
@@ -513,11 +565,20 @@ export default function App() {
               {nutritionPlan.map((meal, idx) => {
                 const contrib = mealFoodContribution(meal);
                 return (
-                  <div key={meal.name} className="plan-card">
-                    <strong>{meal.name}</strong>
-                    <span>{meal.calories} kcal</span>
+                  <div key={meal.name} className="plan-card" style={{ ['--accent-color']: accentColors[idx % accentColors.length] }}>
+                    <div className="header-row" onClick={() => openMealModal(idx)} role="button" tabIndex={0} aria-label={`Open ${meal.name} details`}>
+                      <div className="title">
+                        <strong>{meal.name}</strong>
+                      </div>
+                      <div className="calorie-display">
+                        <span>{meal.calories} kcal</span>
+                      </div>
+                    </div>
 
-                    <div className="inline-group">
+                    {/* make header clickable to open meal details modal */}
+                    <div style={{ height: 0 }} />
+
+                    <div className="pick-controls">
                       <label>
                         Pick (DB)
                         <select defaultValue="" onChange={(e) => addMealFood(idx, e.target.value, 100)}>
@@ -547,27 +608,27 @@ export default function App() {
                       <ul className="food-list">
                         {meal.selectedFoods.map((f, fi) => (
                           <li key={`${f.name}-${fi}`}>
-                            <div>
+                            <div className="food-info">
                               <strong>{f.name}</strong>
-                              <span>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <input
                                   type="number"
                                   value={f.grams}
                                   min={0}
                                   onChange={(e) => updateMealGrams(idx, fi, Number(e.target.value))}
-                                  style={{ width: 80 }}
                                 />
                                 g
-                              </span>
+                              </label>
                             </div>
-                            <div className="food-details">
-                              <span>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div className="food-cal">
                                 {Math.round(((foodDatabase.find((d) => d.name === f.name) || items.find((d) => d.name === f.name))?.calories || 0) * (f.grams || 0) / 100)} kcal
-                              </span>
+                              </div>
+                              <button className="remove-btn" type="button" onClick={() => removeMealFood(idx, fi)}>
+                                Remove
+                              </button>
                             </div>
-                            <button className="link-button" type="button" onClick={() => removeMealFood(idx, fi)}>
-                              Remove
-                            </button>
                           </li>
                         ))}
                       </ul>
@@ -602,6 +663,77 @@ export default function App() {
           <p className="hint">Click generate to create a daily nutrition plan.</p>
         )}
       </section>
+
+      {mealModal.open && mealModal.index !== null && (
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>{nutritionPlan[mealModal.index]?.name} — meal details</h3>
+              <button className="link-button" onClick={closeMealModal} aria-label="Close">Close</button>
+            </div>
+
+            <div className="modal-body">
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                <label style={{ flex: 1 }}>
+                  Add from DB
+                  <select value={modalSelectedFood} onChange={(e) => setModalSelectedFood(e.target.value)}>
+                    <option value="">— choose —</option>
+                    {foodDatabase.map((f) => (
+                      <option key={f.name} value={f.name}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Grams
+                  <input type="number" min={0} value={modalGrams} onChange={(e) => setModalGrams(Number(e.target.value) || 0)} />
+                </label>
+                <button
+                  className="primary-button"
+                  onClick={() => {
+                    if (modalSelectedFood) {
+                      addMealFood(mealModal.index, modalSelectedFood, modalGrams);
+                      setModalSelectedFood('');
+                      setModalGrams(100);
+                    }
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+
+              <div style={{ marginTop: 12 }}>
+                <h4>Selected foods</h4>
+                <ul className="food-list">
+                  {(nutritionPlan[mealModal.index]?.selectedFoods || []).map((f, fi) => (
+                    <li key={`${f.name}-${fi}`}>
+                      <div>
+                        <strong>{f.name}</strong>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={f.grams}
+                              onChange={(e) => updateMealGrams(mealModal.index, fi, Number(e.target.value) || 0)}
+                            />
+                            g
+                          </label>
+                          <div className="food-cal">
+                            {Math.round(((foodDatabase.find((d) => d.name === f.name) || items.find((d) => d.name === f.name))?.calories || 0) * (f.grams || 0) / 100)} kcal
+                          </div>
+                        </div>
+                      </div>
+                      <button className="remove-btn" onClick={() => removeMealFood(mealModal.index, fi)}>Remove</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
