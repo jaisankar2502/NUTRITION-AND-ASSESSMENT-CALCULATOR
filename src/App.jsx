@@ -635,15 +635,33 @@ export default function App() {
                     )}
 
                     <div className="plan-macros">
-                      <span>Target: {meal.calories} kcal</span>
-                      <span>Food: {contrib.calories} kcal</span>
-                      <span>Remaining: {meal.calories - contrib.calories} kcal</span>
+                      <div className="macro-item">
+                        <strong>{meal.calories} kcal</strong>
+                        <small>Target</small>
+                      </div>
+                      <div className="macro-item">
+                        <strong>{contrib.calories} kcal</strong>
+                        <small>Food</small>
+                      </div>
+                      <div className="macro-item">
+                        <strong>{meal.calories - contrib.calories} kcal</strong>
+                        <small>Remaining</small>
+                      </div>
                     </div>
 
-                    <div className="plan-macros">
-                      <span>{meal.protein}g P</span>
-                      <span>{meal.carbs}g C</span>
-                      <span>{meal.fat}g F</span>
+                    <div className="plan-macros macros-small">
+                      <div className="macro-item">
+                        <strong>{meal.protein}g</strong>
+                        <small>P</small>
+                      </div>
+                      <div className="macro-item">
+                        <strong>{meal.carbs}g</strong>
+                        <small>C</small>
+                      </div>
+                      <div className="macro-item">
+                        <strong>{meal.fat}g</strong>
+                        <small>F</small>
+                      </div>
                     </div>
                   </div>
                 );
