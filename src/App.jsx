@@ -74,6 +74,9 @@ export default function App() {
   const [mealModal, setMealModal] = useState({ open: false, index: null });
   const [modalSelectedFood, setModalSelectedFood] = useState('');
   const [modalGrams, setModalGrams] = useState(100);
+  const [editingMealIndex, setEditingMealIndex] = useState(null);
+  const [editorPageOpen, setEditorPageOpen] = useState(false);
+  const [expandedMeals, setExpandedMeals] = useState({});
 
   const roundValue = (value) => Math.round(value);
 
@@ -130,6 +133,26 @@ export default function App() {
 
   const openMealModal = (index) => setMealModal({ open: true, index });
   const closeMealModal = () => setMealModal({ open: false, index: null });
+  const openMealEditorPage = (index) => {
+    setEditingMealIndex(index);
+    setEditorPageOpen(true);
+  };
+
+  const closeMealEditorPage = () => {
+    setEditorPageOpen(false);
+    setEditingMealIndex(null);
+  };
+
+  const toggleAccordion = (index) => {
+    setExpandedMeals((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  const handleCardClick = (index) => {
+    const meal = nutritionPlan[index];
+    const hasFoods = (meal?.selectedFoods || []).length > 0;
+    if (!hasFoods) openMealEditorPage(index);
+    else toggleAccordion(index);
+  };
 
   const removeMealFood = (index, foodIdx) => {
     setNutritionPlan((prev) => {
@@ -433,119 +456,129 @@ export default function App() {
 
       <section className="card">
         <h2>Food log</h2>
-        <div className="food-grid">
-          <label>
-            Food item
-            <select value={selectedFood} onChange={(e) => handleFoodSelect(e.target.value)}>
-              <option value="">Choose from database</option>
-              {foodDatabase.map((food) => (
-                <option key={food.name} value={food.name}>
-                  {food.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Item name
-            <input
-              placeholder="Custom name"
-              value={foodEntry.name}
-              onChange={(e) => setFoodEntry((prev) => ({ ...prev, name: e.target.value }))}
-            />
-          </label>
-          <label>
-            Grams
-            <input
-              type="number"
-              min="0"
-              value={foodEntry.grams}
-              onChange={(e) => handleFoodGramsChange(e.target.value)}
-            />
-          </label>
-          <label>
-            Calories
-            <input
-              type="number"
-              placeholder="Calories"
-              value={foodEntry.calories}
-              onChange={(e) => setFoodEntry((prev) => ({ ...prev, calories: e.target.value }))}
-            />
-          </label>
-          <label>
-            Protein
-            <input
-              type="number"
-              placeholder="Protein"
-              value={foodEntry.protein}
-              onChange={(e) => setFoodEntry((prev) => ({ ...prev, protein: e.target.value }))}
-            />
-          </label>
-          <label>
-            Carbs
-            <input
-              type="number"
-              placeholder="Carbs"
-              value={foodEntry.carbs}
-              onChange={(e) => setFoodEntry((prev) => ({ ...prev, carbs: e.target.value }))}
-            />
-          </label>
-          <label>
-            Fat
-            <input
-              type="number"
-              placeholder="Fat"
-              value={foodEntry.fat}
-              onChange={(e) => setFoodEntry((prev) => ({ ...prev, fat: e.target.value }))}
-            />
-          </label>
-        </div>
-        <button type="button" className="primary-button" onClick={handleFoodAdd}>
-          Add item
-        </button>
-
-        {items.length > 0 ? (
-          <ul className="food-list">
-            {items.map((item, idx) => (
-              <li key={`${item.name}-${idx}`}>
-                <div>
-                  <strong>{item.name}</strong>
-                  <span>{item.calories} kcal</span>
-                </div>
-                <div className="food-details">
-                  <span>{item.protein || 0}g P</span>
-                  <span>{item.carbs || 0}g C</span>
-                  <span>{item.fat || 0}g F</span>
-                </div>
-                <button className="link-button" type="button" onClick={() => removeItem(idx)}>
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="hint">Add food items to track your totals.</p>
-        )}
-
-        {items.length > 0 && (
-          <div className="log-summary">
-            <div>
-              <span>Total calories</span>
-              <strong>{totals.calories}</strong>
+        <div className="food-log-grid">
+          <div className="food-log-form">
+            <div className="food-grid">
+              <label>
+                Food item
+                <select value={selectedFood} onChange={(e) => handleFoodSelect(e.target.value)}>
+                  <option value="">Choose from database</option>
+                  {foodDatabase.map((food) => (
+                    <option key={food.name} value={food.name}>
+                      {food.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Item name
+                <input
+                  placeholder="Custom name"
+                  value={foodEntry.name}
+                  onChange={(e) => setFoodEntry((prev) => ({ ...prev, name: e.target.value }))}
+                />
+              </label>
+              <label>
+                Grams
+                <input
+                  type="number"
+                  min="0"
+                  value={foodEntry.grams}
+                  onChange={(e) => handleFoodGramsChange(e.target.value)}
+                />
+              </label>
+              <label>
+                Calories
+                <input
+                  type="number"
+                  placeholder="Calories"
+                  value={foodEntry.calories}
+                  onChange={(e) => setFoodEntry((prev) => ({ ...prev, calories: e.target.value }))}
+                />
+              </label>
+              <label>
+                Protein
+                <input
+                  type="number"
+                  placeholder="Protein"
+                  value={foodEntry.protein}
+                  onChange={(e) => setFoodEntry((prev) => ({ ...prev, protein: e.target.value }))}
+                />
+              </label>
+              <label>
+                Carbs
+                <input
+                  type="number"
+                  placeholder="Carbs"
+                  value={foodEntry.carbs}
+                  onChange={(e) => setFoodEntry((prev) => ({ ...prev, carbs: e.target.value }))}
+                />
+              </label>
+              <label>
+                Fat
+                <input
+                  type="number"
+                  placeholder="Fat"
+                  value={foodEntry.fat}
+                  onChange={(e) => setFoodEntry((prev) => ({ ...prev, fat: e.target.value }))}
+                />
+              </label>
             </div>
-            <div>
-              <span>Protein</span>
-              <strong>{totals.protein}g</strong>
-            </div>
-            <div>
-              <span>Carbs</span>
-              <strong>{totals.carbs}g</strong>
-            </div>
-            <div>
-              <span>Fat</span>
-              <strong>{totals.fat}g</strong>
-            </div>
+            <button type="button" className="primary-button" onClick={handleFoodAdd}>
+              Add item
+            </button>
           </div>
-        )}
+
+          <div className="food-log-list">
+            {items.length > 0 ? (
+              <ul className="food-list">
+                {items.map((item, idx) => (
+                  <li key={`${item.name}-${idx}`}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ flex: 1 }}>
+                        <strong>{item.name}</strong>
+                        <div className="food-details">
+                          <span>{item.protein || 0}g P</span>
+                          <span>{item.carbs || 0}g C</span>
+                          <span>{item.fat || 0}g F</span>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div className="food-cal">{item.calories} kcal</div>
+                        <button className="remove-btn" type="button" onClick={() => removeItem(idx)}>
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="hint">Add food items to track your totals.</p>
+            )}
+
+            {items.length > 0 && (
+              <div className="log-summary totals-card">
+                <div>
+                  <span>Total calories</span>
+                  <strong>{totals.calories}</strong>
+                </div>
+                <div>
+                  <span>Protein</span>
+                  <strong>{totals.protein}g</strong>
+                </div>
+                <div>
+                  <span>Carbs</span>
+                  <strong>{totals.carbs}g</strong>
+                </div>
+                <div>
+                  <span>Fat</span>
+                  <strong>{totals.fat}g</strong>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </section>
 
       <section className="card">
@@ -565,8 +598,8 @@ export default function App() {
               {nutritionPlan.map((meal, idx) => {
                 const contrib = mealFoodContribution(meal);
                 return (
-                  <div key={meal.name} className="plan-card" style={{ ['--accent-color']: accentColors[idx % accentColors.length] }}>
-                    <div className="header-row" onClick={() => openMealModal(idx)} role="button" tabIndex={0} aria-label={`Open ${meal.name} details`}>
+                    <div key={meal.name} className={`plan-card ${expandedMeals[idx] ? 'expanded' : 'collapsed'}`} style={{ ['--accent-color']: accentColors[idx % accentColors.length] }}>
+                      <div className="header-row" onClick={() => handleCardClick(idx)} role="button" tabIndex={0} aria-label={`Open ${meal.name} details`}>
                       <div className="title">
                         <strong>{meal.name}</strong>
                       </div>
@@ -649,20 +682,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="plan-macros macros-small">
-                      <div className="macro-item">
-                        <strong>{meal.protein}g</strong>
-                        <small>P</small>
-                      </div>
-                      <div className="macro-item">
-                        <strong>{meal.carbs}g</strong>
-                        <small>C</small>
-                      </div>
-                      <div className="macro-item">
-                        <strong>{meal.fat}g</strong>
-                        <small>F</small>
-                      </div>
-                    </div>
+                    {/* Removed P/C/F macros as per the requirement */}
                   </div>
                 );
               })}
@@ -748,6 +768,57 @@ export default function App() {
                   ))}
                 </ul>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full-page meal editor (initial setup) */}
+      {editorPageOpen && editingMealIndex !== null && (
+        <div className="editor-page">
+          <div className="editor-header">
+            <button className="link-button" onClick={closeMealEditorPage}>Back</button>
+            <h2>{nutritionPlan[editingMealIndex].name} — Setup</h2>
+            <div />
+          </div>
+          <div className="editor-body">
+            <div style={{ marginBottom: 12 }}>
+              <label>
+                Add from DB
+                <select defaultValue="" onChange={(e) => addMealFood(editingMealIndex, e.target.value, 100)}>
+                  <option value="">— choose —</option>
+                  {foodDatabase.map((f) => (
+                    <option key={f.name} value={f.name}>{f.name}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div>
+              <h4>Selected foods</h4>
+              <ul className="food-list">
+                {(nutritionPlan[editingMealIndex]?.selectedFoods || []).map((f, fi) => (
+                  <li key={`${f.name}-${fi}`}>
+                    <div>
+                      <strong>{f.name}</strong>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <label>
+                          <input type="number" min={0} value={f.grams} onChange={(e) => updateMealGrams(editingMealIndex, fi, Number(e.target.value) || 0)} />
+                          g
+                        </label>
+                        <div className="food-cal">
+                          {Math.round(((foodDatabase.find((d) => d.name === f.name) || items.find((d) => d.name === f.name))?.calories || 0) * (f.grams || 0) / 100)} kcal
+                        </div>
+                      </div>
+                    </div>
+                    <button className="remove-btn" onClick={() => removeMealFood(editingMealIndex, fi)}>Remove</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button className="primary-button" onClick={() => { closeMealEditorPage(); setExpandedMeals((p) => ({ ...p, [editingMealIndex]: true })); }}>
+                Done
+              </button>
             </div>
           </div>
         </div>

@@ -495,6 +495,56 @@ button {
   color: var(--muted-weak);
 }
 
+/* Food log redesign */
+.food-log-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 18px;
+  align-items: start;
+}
+.food-log-form .food-grid label input,
+.food-log-form .food-grid label select {
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+.food-log-list .food-list {
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 8px;
+}
+.food-log-list .food-list li {
+  padding: 12px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.totals-card {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--surface-start), var(--surface-end));
+}
+.food-log-list .food-cal {
+  font-weight: 800;
+  color: var(--text);
+}
+.food-log-list .remove-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.03);
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+@media (max-width: 840px) {
+  .food-log-grid {
+    grid-template-columns: 1fr;
+  }
+  .food-log-list .food-list {
+    max-height: 240px;
+  }
+}
+
 .log-summary {
   margin-top: 18px;
   display: grid;
@@ -579,6 +629,16 @@ button {
 .plan-card {
   position: relative;
 }
+.plan-card.collapsed .food-list,
+.plan-card.collapsed .pick-controls,
+.plan-card.collapsed .plan-macros {
+  display: none;
+}
+.plan-card.expanded .food-list,
+.plan-card.expanded .pick-controls,
+.plan-card.expanded .plan-macros {
+  display: block;
+}
 .plan-card::before {
   content: '';
   position: absolute;
@@ -609,6 +669,29 @@ body.theme-dark {
   --text: #ffffff;
   --primary: linear-gradient(135deg,#06b6d4 0%,#8b5cf6 100%);
   color-scheme: dark;
+}
+
+/* full-page editor styles */
+.editor-page {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(2,6,23,0.9), rgba(2,6,23,0.95));
+  z-index: 60;
+  padding: 28px;
+  overflow: auto;
+}
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.editor-body {
+  max-width: 960px;
+  background: var(--surface);
+  padding: 18px;
+  border-radius: 12px;
 }
 
 /* Explicit text color rules for clarity in dark mode */
