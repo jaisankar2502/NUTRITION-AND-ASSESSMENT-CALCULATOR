@@ -1,4 +1,33 @@
 import { useMemo, useState, useEffect } from 'react';
+import {
+  Calendar,
+  CalendarCheck,
+  User,
+  Weight,
+  Ruler,
+  Activity,
+  Gauge,
+  Flame,
+  Target,
+  Drumstick,
+  Wheat,
+  Droplet,
+  Plus,
+  Trash2,
+  Save,
+  FolderOpen,
+  Sparkles,
+  Coffee,
+  Sandwich,
+  Apple,
+  Search,
+  Utensils,
+  PieChart,
+  Moon,
+  Sun,
+  Copy,
+  Check,
+} from 'lucide-react';
 import { foodDatabase as rawFoodDatabase } from './foodData';
 
 const activityLevels = [
@@ -35,56 +64,52 @@ const macroTones = { protein: 'green', carbs: 'amber', fat: 'rose' };
 const RING_RADIUS = 52;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-// Small hand-authored line-icon set (no icon font/library) so every icon
-// inherits color via currentColor and stays crisp at any size/theme.
-const ICON_PATHS = {
-  calendar: <><rect x="3" y="4" width="18" height="18" rx="3" /><path d="M16 2v4M8 2v4M3 10h18" /></>,
-  calendarCheck: <><rect x="3" y="4" width="18" height="18" rx="3" /><path d="M16 2v4M8 2v4M3 10h18" /><path d="m9 15 2 2 4-4" /></>,
-  user: <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" /></>,
-  scaleWeight: <><circle cx="12" cy="13" r="8" /><path d="M9 3h6M12 3v3M9.5 10.5l2.5 2.5" /></>,
-  ruler: <><path d="M3 16.5 16.5 3l4.5 4.5L7.5 21z" /><path d="M13 6.5 15 8.5M9.5 10 11.5 12M6 13.5 8 15.5" /></>,
-  activity: <path d="M13 2 4 14h7l-1 8 9-12h-7z" />,
-  gauge: <><path d="M4 16a8 8 0 0 1 16 0" /><path d="M12 16 15.5 10" /><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none" /><path d="M4 16v2M20 16v2M12 8v2" /></>,
-  flame: <path d="M12 2c1 4-4 5-4 9a4 4 0 0 0 8 0c0-2-1-3-1-3s2 1 2 5a6 6 0 0 1-12 0c0-5 3-6 4-11 1 1 2 0 3 0Z" />,
-  target: <><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4" /><circle cx="12" cy="12" r="0.7" fill="currentColor" stroke="none" /></>,
-  drumstick: <path d="M15 11a5 5 0 1 0-7-7c-2 2-2 5-1 7l-4 4a2 2 0 1 0 3 3l4-4c2 1 5 1 7-1Z" />,
-  wheat: <><path d="M12 22V9" /><path d="M12 3c1 1 1 3 0 4-1-1-1-3 0-4ZM8.7 5.8c1.3.5 2 2.2 1.2 3.5-1.3-.5-2-2.2-1.2-3.5ZM15.3 5.8c-1.3.5-2 2.2-1.2 3.5 1.3-.5 2-2.2 1.2-3.5ZM6.8 10.2c1.4.3 2.4 1.9 1.7 3.3-1.4-.3-2.4-1.9-1.7-3.3ZM17.2 10.2c-1.4.3-2.4 1.9-1.7 3.3 1.4-.3 2.4-1.9 1.7-3.3Z" /></>,
-  droplet: <path d="M12 3s6 6.5 6 11a6 6 0 1 1-12 0c0-4.5 6-11 6-11Z" />,
-  plus: <path d="M12 5v14M5 12h14" />,
-  trash: <path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-8 0 1 13a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-13" />,
-  save: <><path d="M5 3h11l3 3v15H5z" /><path d="M8 3v6h8V3M8 21v-7h8v7" /></>,
-  folderOpen: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1H5a2 2 0 0 0-2 2Zm0 3 1.4 7.1A2 2 0 0 0 6.4 19H18a2 2 0 0 0 2-1.9L21 10Z" />,
-  sparkles: <><path d="M12 3v4M12 17v4M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M18.4 5.6l1.4-1.4M4.2 19.8l1.4-1.4" /><path d="M12 8a4 4 0 0 0 4 4 4 4 0 0 0-4 4 4 4 0 0 0-4-4 4 4 0 0 0 4-4Z" /></>,
-  coffee: <><path d="M4 8h13a3 3 0 0 1 0 6h-1" /><path d="M4 8v6a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V8" /><path d="M6 4c0 1-1 1-1 2M10 4c0 1-1 1-1 2" /></>,
-  sandwich: <><path d="M3 12h18" /><path d="M4 12 6 6h12l2 6" /><path d="m4 12 1 6h14l1-6" /></>,
-  moonMeal: <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" />,
-  apple: <><path d="M12 8c-3-2-7 0-7 5a8 8 0 0 0 7 8 8 8 0 0 0 7-8c0-5-4-7-7-5Z" /><path d="M12 8V5a2 2 0 0 1 2-2" /></>,
-  search: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.35-4.35" /></>,
-  utensils: <><path d="M6 2v7a2 2 0 0 0 4 0V2M8 9v13" /><path d="M17 2c-1.7 0-3 2-3 4.5S15.3 11 17 11v11" /></>,
-  pieChart: <><circle cx="12" cy="12" r="9" /><path d="M12 3v9l7 4" /></>,
-  moon: <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />,
-  sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></>,
-  copy: <><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></>,
-  check: <path d="M4 12l5 5L20 6" />,
+// Lucide icon set: verified, professionally centered line icons, keyed by
+// the same semantic names used throughout the app's JSX.
+const ICONS = {
+  calendar: Calendar,
+  calendarCheck: CalendarCheck,
+  user: User,
+  scaleWeight: Weight,
+  ruler: Ruler,
+  activity: Activity,
+  gauge: Gauge,
+  flame: Flame,
+  target: Target,
+  drumstick: Drumstick,
+  wheat: Wheat,
+  droplet: Droplet,
+  plus: Plus,
+  trash: Trash2,
+  save: Save,
+  folderOpen: FolderOpen,
+  sparkles: Sparkles,
+  coffee: Coffee,
+  sandwich: Sandwich,
+  moonMeal: Moon,
+  apple: Apple,
+  search: Search,
+  utensils: Utensils,
+  pieChart: PieChart,
+  moon: Moon,
+  sun: Sun,
+  copy: Copy,
+  check: Check,
 };
 
-const Icon = ({ name, size = 18, className = '', ...rest }) => (
-  <svg
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={`icon${className ? ` ${className}` : ''}`}
-    aria-hidden="true"
-    {...rest}
-  >
-    {ICON_PATHS[name]}
-  </svg>
-);
+const Icon = ({ name, size = 18, className = '', ...rest }) => {
+  const LucideIcon = ICONS[name];
+  if (!LucideIcon) return null;
+  return (
+    <LucideIcon
+      size={size}
+      strokeWidth={2}
+      className={`icon${className ? ` ${className}` : ''}`}
+      aria-hidden="true"
+      {...rest}
+    />
+  );
+};
 
 const formatNumber = (value) => Number(value).toFixed(1);
 
