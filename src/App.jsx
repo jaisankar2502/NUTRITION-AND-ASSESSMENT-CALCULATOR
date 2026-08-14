@@ -29,6 +29,7 @@ import {
   Check,
 } from 'lucide-react';
 import { foodDatabase as rawFoodDatabase } from './foodData';
+import SearchableSelect from './SearchableSelect';
 
 // three.js pulls in a large bundle — load it only once a section that
 // actually needs a 3D visual renders.
@@ -610,40 +611,50 @@ export default function App() {
           </label>
           <label>
             <span className="label-text"><Icon name="user" size={16} /> Sex</span>
-            <select value={profile.sex} onChange={(e) => updateProfile('sex', e.target.value)}>
-              <option value="female">Female</option>
-              <option value="male">Male</option>
-            </select>
+            <SearchableSelect
+              value={profile.sex}
+              onChange={(val) => updateProfile('sex', val)}
+              options={[
+                { value: 'female', label: 'Female' },
+                { value: 'male', label: 'Male' },
+              ]}
+            />
           </label>
           <label>
             <span className="label-text"><Icon name="scaleWeight" size={16} /> Weight</span>
             <div className="inline-group">
               <input type="number" min="1" value={profile.weight} onChange={(e) => updateProfile('weight', parseNumberInput(e))} />
-              <select value={profile.weightUnit} onChange={(e) => updateProfile('weightUnit', e.target.value)}>
-                <option value="kg">kg</option>
-                <option value="lb">lb</option>
-              </select>
+              <SearchableSelect
+                value={profile.weightUnit}
+                onChange={(val) => updateProfile('weightUnit', val)}
+                options={[
+                  { value: 'kg', label: 'kg' },
+                  { value: 'lb', label: 'lb' },
+                ]}
+              />
             </div>
           </label>
           <label>
             <span className="label-text"><Icon name="ruler" size={16} /> Height</span>
             <div className="inline-group">
               <input type="number" min="1" value={profile.height} onChange={(e) => updateProfile('height', parseNumberInput(e))} />
-              <select value={profile.heightUnit} onChange={(e) => updateProfile('heightUnit', e.target.value)}>
-                <option value="cm">cm</option>
-                <option value="in">in</option>
-              </select>
+              <SearchableSelect
+                value={profile.heightUnit}
+                onChange={(val) => updateProfile('heightUnit', val)}
+                options={[
+                  { value: 'cm', label: 'cm' },
+                  { value: 'in', label: 'in' },
+                ]}
+              />
             </div>
           </label>
           <label className="full-width">
             <span className="label-text"><Icon name="activity" size={16} /> Activity</span>
-            <select value={profile.activity} onChange={(e) => updateProfile('activity', Number(e.target.value))}>
-              {activityLevels.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={profile.activity}
+              onChange={(val) => updateProfile('activity', Number(val))}
+              options={activityLevels.map((option) => ({ value: option.value, label: option.label }))}
+            />
           </label>
         </div>
       </section>
@@ -817,14 +828,16 @@ export default function App() {
             <div className="food-grid">
               <label className="field-wide">
                 Food item
-                <select value={selectedFood} onChange={(e) => handleFoodSelect(e.target.value)}>
-                  <option value="">Choose from database</option>
-                  {foodDatabase.map((food) => (
-                    <option key={food.name} value={food.name}>
-                      {food.name} ({formatServing(food.baseQty, food.unit)})
-                    </option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  value={selectedFood}
+                  onChange={(val) => handleFoodSelect(val)}
+                  placeholder="Choose from database"
+                  searchPlaceholder="Search foods…"
+                  options={foodDatabase.map((food) => ({
+                    value: food.name,
+                    label: `${food.name} (${formatServing(food.baseQty, food.unit)})`,
+                  }))}
+                />
               </label>
               <label className="field-half">
                 Item name
@@ -988,26 +1001,34 @@ export default function App() {
                     <div className="pick-controls">
                       <label>
                         Pick (DB)
-                        <select defaultValue="" onChange={(e) => addMealFood(idx, e.target.value, getFoodStep(e.target.value))}>
-                          <option value="">— choose —</option>
-                          {foodDatabase.map((f) => (
-                            <option key={f.name} value={f.name}>
-                              {f.name} ({formatServing(f.baseQty, f.unit)})
-                            </option>
-                          ))}
-                        </select>
+                        <SearchableSelect
+                          value=""
+                          resetAfterSelect
+                          onChange={(val) => addMealFood(idx, val, getFoodStep(val))}
+                          placeholder="— choose —"
+                          searchPlaceholder="Search foods…"
+                          options={foodDatabase.map((f) => ({
+                            value: f.name,
+                            label: `${f.name} (${formatServing(f.baseQty, f.unit)})`,
+                          }))}
+                        />
                       </label>
 
                       <label>
                         Pick (Log)
-                        <select defaultValue="" onChange={(e) => addMealFood(idx, e.target.value, getFoodStep(e.target.value))}>
-                          <option value="">— choose —</option>
-                          {items.map((it, i) => (
-                            <option key={`${it.name}-${i}`} value={it.name}>
-                              {it.name} ({formatServing(it.baseQty, it.unit || 'g')})
-                            </option>
-                          ))}
-                        </select>
+                        <SearchableSelect
+                          value=""
+                          resetAfterSelect
+                          onChange={(val) => addMealFood(idx, val, getFoodStep(val))}
+                          placeholder="— choose —"
+                          searchPlaceholder="Search…"
+                          emptyLabel="No items logged yet"
+                          options={items.map((it, i) => ({
+                            value: it.name,
+                            label: `${it.name} (${formatServing(it.baseQty, it.unit || 'g')})`,
+                            key: `${it.name}-${i}`,
+                          }))}
+                        />
                       </label>
                     </div>
 

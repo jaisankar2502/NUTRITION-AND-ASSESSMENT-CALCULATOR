@@ -637,6 +637,144 @@ button:focus-visible,
   min-width: 78px;
 }
 
+.inline-group .searchable-select {
+  width: auto;
+  min-width: 78px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Searchable select (custom combobox)                                 */
+/* Native <select> options can't be filtered by typing once a list has */
+/* more than a handful of entries (the food database has 60+), so this */
+/* swaps in a button + search field + list combo in its place.         */
+/* ------------------------------------------------------------------ */
+.searchable-select {
+  position: relative;
+  width: 100%;
+}
+
+.searchable-select-trigger {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 40px 11px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border-strong);
+  background-color: var(--input-bg);
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  text-align: left;
+}
+
+.searchable-select-trigger span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.searchable-select-trigger span.placeholder {
+  color: var(--muted);
+}
+
+.searchable-select-trigger:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--card-border-strong));
+}
+
+.searchable-select-trigger:focus-visible,
+.searchable-select-trigger[aria-expanded='true'] {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  border-color: var(--accent);
+}
+
+.searchable-select-chevron {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.searchable-select-trigger[aria-expanded='true'] .searchable-select-chevron {
+  transform: rotate(180deg);
+}
+
+.searchable-select-menu {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.searchable-select-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--card-border);
+  color: var(--muted);
+}
+
+.searchable-select-search input {
+  min-height: 0;
+  width: 100%;
+  border: none;
+  padding: var(--space-2) 0;
+  background: none;
+}
+
+.searchable-select-search input:focus-visible {
+  box-shadow: none;
+}
+
+.searchable-select-options {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+.searchable-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.searchable-select-option.highlighted {
+  background-color: var(--accent-soft);
+}
+
+.searchable-select-option.selected {
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
+.searchable-select-option svg {
+  flex-shrink: 0;
+  color: var(--accent-2);
+}
+
+.searchable-select-empty {
+  padding: var(--space-3);
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
 /* ------------------------------------------------------------------ */
 /* Buttons                                                              */
 /* Every button shares height/radius/type via this base, then variants */
@@ -1489,7 +1627,8 @@ button {
   display: block;
 }
 
-.plan-card .pick-controls select {
+.plan-card .pick-controls select,
+.plan-card .pick-controls .searchable-select {
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -1634,7 +1773,8 @@ button {
 
 @media (max-width: 480px) {
   .plan-card label,
-  .plan-card select {
+  .plan-card select,
+  .plan-card .searchable-select {
     width: 100%;
   }
 }
