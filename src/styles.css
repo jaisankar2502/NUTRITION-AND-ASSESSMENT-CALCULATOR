@@ -419,7 +419,10 @@ body.theme-dark .logo {
   color: var(--text);
 }
 
-.hero-overview span {
+/* `strong + span` (not a bare `span`) so this only ever matches the label
+   that follows the value — the .stat-icon badge is also a <span> in this
+   container and must keep its own flex centering untouched. */
+.hero-overview strong + span {
   display: block;
   margin-top: 2px;
   font-size: var(--text-sm);
@@ -499,9 +502,12 @@ body.theme-dark .logo {
   grid-template-columns: repeat(3, minmax(180px, 1fr));
 }
 
-.macro-grid,
-.food-grid {
+.macro-grid {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.food-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .full-width {
@@ -736,7 +742,10 @@ button {
   color: var(--text);
 }
 
-.result-card span {
+/* `strong + span` (not a bare `span`) so this only ever matches the label
+   that follows the value — the .stat-icon badge is also a <span> in this
+   container and must keep its own flex centering untouched. */
+.result-card strong + span {
   display: block;
   margin-top: 2px;
   font-size: var(--text-sm);
@@ -978,7 +987,7 @@ button {
   display: grid;
   grid-template-columns: 1fr 340px;
   gap: var(--space-5);
-  align-items: start;
+  align-items: stretch;
 }
 
 .food-log-form .primary-button {
@@ -994,10 +1003,32 @@ button {
   max-width: 160px;
 }
 
+/* Explicit spans instead of auto-fit: the field count (1 wide + 2 half +
+   4 single) always fills complete rows, so no field is ever left stranded
+   alone on a trailing row with empty space beside it. */
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.field-half {
+  grid-column: span 2;
+}
+
+.food-log-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .food-log-list .food-list {
   max-height: 360px;
   overflow: auto;
   padding-right: var(--space-2);
+}
+
+.food-log-list .empty-state {
+  flex: 1;
+  justify-content: center;
 }
 
 .food-list {
@@ -1389,11 +1420,12 @@ button {
 
 .plan-card .food-list li input[type='number'],
 .editor-body .food-list li input[type='number'] {
-  width: 60px;
+  width: 68px;
   min-height: 32px;
   padding: 6px 8px;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
+  text-align: right;
 }
 
 .plan-card .food-list li .food-cal,
@@ -1464,6 +1496,13 @@ button {
   }
   .plan-card .pick-controls {
     flex-direction: column;
+    align-items: stretch;
+  }
+  .plan-card .pick-controls label {
+    /* the 160px flex-basis above is a *width* target for the row layout;
+       in a column flex context flex-basis instead sets a minimum
+       *height*, which blew each label up to 160px tall. */
+    flex: none;
   }
   .plan-card .header-row {
     flex-direction: column;
@@ -1598,6 +1637,12 @@ body.theme-dark .editor-search input {
   .hero-overview,
   .log-summary {
     grid-template-columns: 1fr;
+  }
+  /* `span 2` is an explicit track count, not a fraction — on a 1-column
+     grid it would force a phantom second column instead of degrading to
+     full width, so it must be reset alongside the column collapse above. */
+  .field-half {
+    grid-column: auto;
   }
   .primary-button,
   .secondary-button {

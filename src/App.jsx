@@ -731,7 +731,7 @@ export default function App() {
         <div className="food-log-grid">
           <div className="food-log-form">
             <div className="food-grid">
-              <label>
+              <label className="field-wide">
                 Food item
                 <select value={selectedFood} onChange={(e) => handleFoodSelect(e.target.value)}>
                   <option value="">Choose from database</option>
@@ -742,7 +742,7 @@ export default function App() {
                   ))}
                 </select>
               </label>
-              <label>
+              <label className="field-half">
                 Item name
                 <input
                   placeholder="Custom name"
@@ -750,7 +750,7 @@ export default function App() {
                   onChange={(e) => setFoodEntry((prev) => ({ ...prev, name: e.target.value }))}
                 />
               </label>
-              <label>
+              <label className="field-half">
                 Grams
                 <input
                   type="number"
