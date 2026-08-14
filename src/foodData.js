@@ -26,7 +26,7 @@ export const foodDatabase = [
   { name: 'Chapathi 1 Qty', carbs: 20, protein: 3.8, fat: 2.3 },
   { name: 'Cheese 1 Slice', carbs: 1, protein: 6, fat: 5 },
   { name: 'Chicken Biryani', carbs: 19, protein: 35, fat: 18.6 },
-  { name: 'Chicken Breast 100 gm', carbs: 0, protein: 31.5, fat: 3.6 },
+  { name: 'Chicken Breast 100 gm', carbs: 0, protein: 31.5, fat: 3.6, calories: 165 },
   { name: 'Chicken Curry 1 Cup', carbs: 8.5, protein: 5.1, fat: 6.5 },
   { name: 'Chicken Fry 100 gm', carbs: 6.5, protein: 13.5, fat: 17.9 },
   { name: 'Chicken Tandoori 150 gm', carbs: 3.2, protein: 30, fat: 7 },

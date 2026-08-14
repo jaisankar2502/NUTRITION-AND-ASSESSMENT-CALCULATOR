@@ -18,6 +18,8 @@ The UI is built as one responsive layout with a light/dark theme toggle, and is 
 
 - [React 18](https://react.dev/) + [Vite 5](https://vitejs.dev/) (`@vitejs/plugin-react`)
 - Plain CSS (`src/styles.css`) — no CSS framework or component library
+- [Lucide](https://lucide.dev/) for icons
+- [Three.js](https://threejs.org/) via `@react-three/fiber`/`@react-three/drei` for the 3D macro chart in the Food log — lazy-loaded so it doesn't add to the initial bundle
 - No backend — all state is in-memory/`localStorage`
 
 ## Project Structure

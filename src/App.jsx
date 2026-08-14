@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, lazy, Suspense } from 'react';
 import {
   Calendar,
   CalendarCheck,
@@ -30,6 +30,11 @@ import {
 } from 'lucide-react';
 import { foodDatabase as rawFoodDatabase } from './foodData';
 
+// three.js pulls in a large bundle — load it only once a section that
+// actually needs a 3D visual renders.
+const MacroDonut3D = lazy(() => import('./MacroDonut3D'));
+const BodyMeter3D = lazy(() => import('./BodyMeter3D'));
+
 const activityLevels = [
   { value: 1.2, label: 'Sedentary' },
   { value: 1.375, label: 'Lightly active' },
@@ -54,15 +59,19 @@ const bmiScalePosition = (bmi) => {
   return ((clamped - BMI_SCALE_MIN) / (BMI_SCALE_MAX - BMI_SCALE_MIN)) * 100;
 };
 
+// Same four zone colors as the .bmi-scale-track gradient in styles.css, so
+// the 3D body meter always matches the 2D scale bar right next to it.
+const bmiZoneColor = (bmi) => {
+  if (bmi < 18.5) return '#38bdf8';
+  if (bmi < 25) return '#0d9488';
+  if (bmi < 30) return '#d97706';
+  return '#dc2626';
+};
+
 const mealIcons = { Breakfast: 'coffee', Lunch: 'sandwich', Dinner: 'moonMeal', Snacks: 'apple' };
 const mealTimes = { Breakfast: '7:30 AM', Lunch: '12:30 PM', Dinner: '7:30 PM', Snacks: '4:00 PM' };
 const macroIcons = { protein: 'drumstick', carbs: 'wheat', fat: 'droplet' };
 const macroTones = { protein: 'green', carbs: 'amber', fat: 'rose' };
-
-// Calorie ring geometry: an SVG circle's stroke-dasharray/offset trick draws
-// a circular progress arc without any charting library.
-const RING_RADIUS = 52;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 // Lucide icon set: verified, professionally centered line icons, keyed by
 // the same semantic names used throughout the app's JSX.
@@ -223,8 +232,18 @@ export default function App() {
     if (!foodName) return;
     setNutritionPlan((prev) => {
       const plan = [...prev];
-      const entry = { name: foodName, grams: Number(grams) || 0 };
-      plan[index] = { ...plan[index], selectedFoods: [...(plan[index].selectedFoods || []), entry] };
+      const foods = [...(plan[index].selectedFoods || [])];
+      const existingIdx = foods.findIndex((f) => f.name === foodName);
+      if (existingIdx >= 0) {
+        // already in this meal — bump the quantity instead of adding a duplicate row
+        foods[existingIdx] = {
+          ...foods[existingIdx],
+          grams: (Number(foods[existingIdx].grams) || 0) + (Number(grams) || 0),
+        };
+      } else {
+        foods.push({ name: foodName, grams: Number(grams) || 0 });
+      }
+      plan[index] = { ...plan[index], selectedFoods: foods };
       return plan;
     });
   };
@@ -270,13 +289,32 @@ export default function App() {
     });
   };
 
+  const adjustMealGrams = (index, foodIdx, delta) => {
+    setNutritionPlan((prev) => {
+      const plan = [...prev];
+      const foods = [...(plan[index].selectedFoods || [])];
+      if (!foods[foodIdx]) return plan;
+      const nextGrams = Math.max(0, (Number(foods[foodIdx].grams) || 0) + delta);
+      foods[foodIdx] = { ...foods[foodIdx], grams: nextGrams };
+      plan[index] = { ...plan[index], selectedFoods: foods };
+      return plan;
+    });
+  };
+
+  const getFoodStep = (name) => (foodDatabase.find((d) => d.name === name) || items.find((d) => d.name === name))?.baseGram || 10;
+
+  const getFoodKcal = (name, grams) => {
+    const food = foodDatabase.find((d) => d.name === name) || items.find((d) => d.name === name);
+    return Math.round(((food?.calories || 0) * (grams || 0)) / (food?.baseGram || 100));
+  };
+
   const mealFoodContribution = (meal) => {
     const foods = meal.selectedFoods || [];
     return foods.reduce(
       (acc, f) => {
         const food = foodDatabase.find((d) => d.name === f.name) || items.find((d) => d.name === f.name);
         if (!food) return acc;
-        const scale = (f.grams || 0) / 100;
+        const scale = (f.grams || 0) / (food.baseGram || 100);
         acc.calories += Math.round((food.calories || 0) * scale);
         acc.protein += Math.round((food.protein || 0) * scale * 10) / 10;
         acc.carbs += Math.round((food.carbs || 0) * scale * 10) / 10;
@@ -392,6 +430,9 @@ export default function App() {
         carbs: Number(foodEntry.carbs),
         fat: Number(foodEntry.fat),
         grams: Number(foodEntry.grams) || 0,
+        // logged calories/macros are the total for `grams`, not a per-100g rate —
+        // record that as baseGram so the meal planner scales it correctly.
+        baseGram: Number(foodEntry.grams) || 100,
       },
     ]);
     setFoodEntry({ name: '', calories: '', protein: '', carbs: '', fat: '', grams: 100 });
@@ -454,22 +495,43 @@ export default function App() {
     ].join('\n');
 
   const buildPlanText = () => {
-    const lines = ['Nutrition plan'];
+    const lines = [
+      'NUTRITION PLAN',
+      `Daily target: ${formatNumber(metrics.tdee)} kcal  (P ${formatNumber(metrics.proteinGrams)}g · C ${formatNumber(metrics.carbsGrams)}g · F ${formatNumber(metrics.fatGrams)}g)`,
+      '',
+    ];
+
+    const grand = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
     nutritionPlan.forEach((meal) => {
       const time = mealTimes[meal.name] ? ` (${mealTimes[meal.name]})` : '';
-      lines.push(`\n${meal.name}${time} — ${meal.calories} kcal`);
+      const contrib = mealFoodContribution(meal);
+      grand.calories += contrib.calories;
+      grand.protein += contrib.protein;
+      grand.carbs += contrib.carbs;
+      grand.fat += contrib.fat;
+
+      lines.push(`${meal.name.toUpperCase()}${time} — ${meal.calories} kcal target`);
       const foods = meal.selectedFoods || [];
       if (foods.length === 0) {
         lines.push('  (no foods added)');
       } else {
         foods.forEach((f) => {
           const food = foodDatabase.find((d) => d.name === f.name) || items.find((d) => d.name === f.name);
-          const kcal = Math.round(((food?.calories || 0) * (f.grams || 0)) / 100);
+          const kcal = Math.round(((food?.calories || 0) * (f.grams || 0)) / (food?.baseGram || 100));
           lines.push(`  - ${f.name} (${f.grams}g) — ${kcal} kcal`);
         });
+        lines.push(`  Subtotal: ${contrib.calories} kcal · P ${contrib.protein}g · C ${contrib.carbs}g · F ${contrib.fat}g`);
       }
+      lines.push('');
     });
-    lines.push(`\nDaily target: ${formatNumber(metrics.tdee)} kcal`);
+
+    lines.push('TOTALS');
+    lines.push(`  Food added: ${formatNumber(grand.calories)} / ${formatNumber(metrics.tdee)} kcal`);
+    lines.push(
+      `  P ${formatNumber(grand.protein)}g / ${formatNumber(metrics.proteinGrams)}g · C ${formatNumber(grand.carbs)}g / ${formatNumber(metrics.carbsGrams)}g · F ${formatNumber(grand.fat)}g / ${formatNumber(metrics.fatGrams)}g`,
+    );
+
     return lines.join('\n');
   };
 
@@ -569,6 +631,21 @@ export default function App() {
             <Icon name={copiedKey === 'results' ? 'check' : 'copy'} size={16} /> {copiedKey === 'results' ? 'Copied' : 'Copy'}
           </button>
         </div>
+
+        <div className="bmi-visual">
+          <div className="bmi-visual-figure">
+            <Suspense fallback={<div className="bmi-visual-fallback" />}>
+              <BodyMeter3D sex={profile.sex} bmiT={bmiScalePosition(metrics.bmi) / 100} color={bmiZoneColor(metrics.bmi)} />
+            </Suspense>
+          </div>
+          <div className="bmi-visual-copy">
+            <span className="stat-icon" data-tone="violet"><Icon name="gauge" /></span>
+            <strong>{formatNumber(metrics.bmi)}</strong>
+            <span className="bmi-visual-label">BMI &middot; {metrics.bmiLabel}</span>
+            <p>Body shape scales from lean to heavier build to match where your BMI sits on the under / normal / over / obese scale.</p>
+          </div>
+        </div>
+
         <div className="result-grid">
           <div className="result-card">
             <div className="result-card-head">
@@ -681,26 +758,9 @@ export default function App() {
         <div className="log-analytics">
           <div className="calorie-ring-card">
             <div className="calorie-ring">
-              <svg viewBox="0 0 120 120">
-                <circle className="ring-track" cx="60" cy="60" r={RING_RADIUS} />
-                <circle
-                  className="ring-fill"
-                  cx="60"
-                  cy="60"
-                  r={RING_RADIUS}
-                  style={{
-                    strokeDasharray: RING_CIRCUMFERENCE,
-                    strokeDashoffset: RING_CIRCUMFERENCE * (1 - caloriePct / 100),
-                    stroke: calorieOver ? '#dc2626' : 'url(#ringGradient)',
-                  }}
-                />
-                <defs>
-                  <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#2dd4bf" />
-                    <stop offset="100%" stopColor="#0d9488" />
-                  </linearGradient>
-                </defs>
-              </svg>
+              <Suspense fallback={<div className="calorie-ring-fallback" />}>
+                <MacroDonut3D protein={totals.protein} carbs={totals.carbs} fat={totals.fat} theme={theme} />
+              </Suspense>
               <div className="calorie-ring-center">
                 <strong>{totals.calories}</strong>
                 <span>kcal consumed</span>
@@ -903,7 +963,7 @@ export default function App() {
                     <div className="pick-controls">
                       <label>
                         Pick (DB)
-                        <select defaultValue="" onChange={(e) => addMealFood(idx, e.target.value, 100)}>
+                        <select defaultValue="" onChange={(e) => addMealFood(idx, e.target.value, getFoodStep(e.target.value))}>
                           <option value="">— choose —</option>
                           {foodDatabase.map((f) => (
                             <option key={f.name} value={f.name}>
@@ -915,7 +975,7 @@ export default function App() {
 
                       <label>
                         Pick (Log)
-                        <select defaultValue="" onChange={(e) => addMealFood(idx, e.target.value, 100)}>
+                        <select defaultValue="" onChange={(e) => addMealFood(idx, e.target.value, getFoodStep(e.target.value))}>
                           <option value="">— choose —</option>
                           {items.map((it, i) => (
                             <option key={`${it.name}-${i}`} value={it.name}>
@@ -943,6 +1003,14 @@ export default function App() {
                             </div>
                             <div className="food-info-row food-info-meta">
                               <label className="grams-field">
+                                <button
+                                  type="button"
+                                  className="qty-step"
+                                  aria-label={`Decrease ${f.name} quantity`}
+                                  onClick={() => adjustMealGrams(idx, fi, -getFoodStep(f.name))}
+                                >
+                                  −
+                                </button>
                                 <input
                                   type="number"
                                   value={f.grams}
@@ -950,9 +1018,17 @@ export default function App() {
                                   onChange={(e) => updateMealGrams(idx, fi, parseNumberInput(e))}
                                 />
                                 g
+                                <button
+                                  type="button"
+                                  className="qty-step"
+                                  aria-label={`Increase ${f.name} quantity`}
+                                  onClick={() => adjustMealGrams(idx, fi, getFoodStep(f.name))}
+                                >
+                                  +
+                                </button>
                               </label>
                               <span className="food-cal">
-                                {Math.round(((foodDatabase.find((d) => d.name === f.name) || items.find((d) => d.name === f.name))?.calories || 0) * (f.grams || 0) / 100)} kcal
+                                {getFoodKcal(f.name, f.grams)} kcal
                               </span>
                             </div>
                           </li>
@@ -1001,6 +1077,13 @@ export default function App() {
         )}
       </section>
 
+      <footer className="app-footer">
+        <span className="app-footer-brand">
+          <span className="logo logo-sm">NA</span> Nutrition &amp; Assessment Calculator
+        </span>
+        <span className="app-footer-meta">&copy; {new Date().getFullYear()} &middot; Built for quick daily tracking</span>
+      </footer>
+
       {/* Full-page meal editor (initial setup) */}
       {editorPageOpen && editingMealIndex !== null && (
         <div className="editor-page">
@@ -1010,6 +1093,46 @@ export default function App() {
             <div />
           </div>
           <div className="editor-body">
+            {(() => {
+              const meal = nutritionPlan[editingMealIndex];
+              const contrib = mealFoodContribution(meal);
+              return (
+                <div className="editor-meal-targets">
+                  <div className="plan-macros">
+                    <div className="macro-item">
+                      <strong>{meal.calories} kcal</strong>
+                      <small>Target</small>
+                    </div>
+                    <div className="macro-item">
+                      <strong>{contrib.calories} kcal</strong>
+                      <small>Added</small>
+                    </div>
+                    <div className="macro-item">
+                      <strong>{Math.max(0, meal.calories - contrib.calories)} kcal</strong>
+                      <small>Remaining</small>
+                    </div>
+                  </div>
+                  <div className="macro-progress">
+                    {['protein', 'carbs', 'fat'].map((macro) => {
+                      const target = meal[macro] || 0;
+                      const consumed = contrib[macro] || 0;
+                      const pct = target > 0 ? Math.min(100, (consumed / target) * 100) : 0;
+                      return (
+                        <div className="macro-progress-row" key={macro}>
+                          <span className="macro-progress-label">
+                            <Icon name={macroIcons[macro]} size={15} /> {macro.charAt(0).toUpperCase() + macro.slice(1)}
+                          </span>
+                          <div className="macro-progress-track">
+                            <span className="macro-progress-fill" data-tone={macroTones[macro]} style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="macro-progress-value">{consumed}g / {target}g</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
             <div style={{ marginBottom: 12 }}>
               <label className="editor-search">
                 Search foods
@@ -1062,11 +1185,27 @@ export default function App() {
                     </div>
                     <div className="food-info-row food-info-meta">
                       <label className="grams-field">
+                        <button
+                          type="button"
+                          className="qty-step"
+                          aria-label={`Decrease ${f.name} quantity`}
+                          onClick={() => adjustMealGrams(editingMealIndex, fi, -getFoodStep(f.name))}
+                        >
+                          −
+                        </button>
                         <input type="number" min={0} value={f.grams} onChange={(e) => updateMealGrams(editingMealIndex, fi, parseNumberInput(e))} />
                         g
+                        <button
+                          type="button"
+                          className="qty-step"
+                          aria-label={`Increase ${f.name} quantity`}
+                          onClick={() => adjustMealGrams(editingMealIndex, fi, getFoodStep(f.name))}
+                        >
+                          +
+                        </button>
                       </label>
                       <span className="food-cal">
-                        {Math.round(((foodDatabase.find((d) => d.name === f.name) || items.find((d) => d.name === f.name))?.calories || 0) * (f.grams || 0) / 100)} kcal
+                        {getFoodKcal(f.name, f.grams)} kcal
                       </span>
                     </div>
                   </li>

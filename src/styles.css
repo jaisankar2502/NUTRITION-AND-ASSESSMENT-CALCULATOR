@@ -98,6 +98,9 @@ select {
   --surface-start: #ffffff;
   --surface-end: #ffffff;
   --input-bg: #ffffff;
+  /* Opaque color to halo text against on the calorie donut: .log-analytics
+     is an opaque --surface panel in light mode, so it matches exactly. */
+  --ring-halo: var(--surface);
   --card-border: #e2e8f0;
   --card-border-strong: #cbd5e1;
   --text: #0f172a;
@@ -182,6 +185,10 @@ body.theme-dark {
   --surface-start: #10151f;
   --surface-end: #10151f;
   --input-bg: rgba(255, 255, 255, 0.04);
+  /* --surface is a near-transparent wash here, so it isn't opaque enough to
+     halo text against — --card-bg is the closest opaque approximation of
+     what's actually behind the translucent panel. */
+  --ring-halo: var(--card-bg);
   --card-border: rgba(255, 255, 255, 0.09);
   --card-border-strong: rgba(255, 255, 255, 0.16);
   --text: #f1f5f9;
@@ -302,6 +309,32 @@ button {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Footer                                                               */
+/* Mirrors the top-nav's edge-to-edge bleed, just anchored to the       */
+/* bottom of .app-shell instead of the top.                            */
+/* ------------------------------------------------------------------ */
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-6) calc(var(--space-5) * -1) calc(var(--space-12) * -1);
+  padding: var(--space-5);
+  border-top: 1px solid var(--card-border);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.app-footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  color: var(--muted-strong);
+}
+
 .brand {
   display: flex;
   gap: var(--space-3);
@@ -331,6 +364,13 @@ button {
 body.theme-dark .logo {
   background: var(--accent);
   color: #06201c;
+}
+
+.logo-sm {
+  width: 20px;
+  height: 20px;
+  font-size: 0.6rem;
+  border-radius: var(--radius-sm);
 }
 
 .brand-title {
@@ -794,6 +834,78 @@ button {
 }
 
 /* ------------------------------------------------------------------ */
+/* BMI 3D body meter                                                    */
+/* ------------------------------------------------------------------ */
+.bmi-visual {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--space-6);
+  align-items: center;
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+}
+
+.bmi-visual-figure {
+  position: relative;
+  width: 140px;
+  height: 200px;
+  cursor: grab;
+  justify-self: center;
+}
+
+.bmi-visual-figure:active {
+  cursor: grabbing;
+}
+
+.bmi-visual-fallback {
+  position: absolute;
+  inset: 8px;
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--card-border-strong);
+}
+
+.bmi-visual-copy {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+
+.bmi-visual-copy .stat-icon {
+  margin-bottom: var(--space-1);
+}
+
+.bmi-visual-copy strong {
+  font-size: var(--text-2xl);
+  color: var(--text);
+  line-height: 1;
+}
+
+.bmi-visual-label {
+  color: var(--muted-weak);
+  font-weight: 600;
+}
+
+.bmi-visual-copy p {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  max-width: 42ch;
+}
+
+@media (max-width: 640px) {
+  .bmi-visual {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+  .bmi-visual-copy {
+    justify-items: center;
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Macro ratio stacked bar                                              */
 /* ------------------------------------------------------------------ */
 .macro-bar {
@@ -869,25 +981,22 @@ button {
   position: relative;
   width: 140px;
   height: 140px;
+  cursor: grab;
 }
 
-.calorie-ring svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
+.calorie-ring:active {
+  cursor: grabbing;
 }
 
-.ring-track {
-  fill: none;
-  stroke: var(--card-border);
-  stroke-width: 10;
+.calorie-ring canvas {
+  outline: none;
 }
 
-.ring-fill {
-  fill: none;
-  stroke-width: 10;
-  stroke-linecap: round;
-  transition: stroke-dashoffset var(--duration-slow) var(--ease-out);
+.calorie-ring-fallback {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  border: 10px solid var(--card-border);
 }
 
 .calorie-ring-center {
@@ -897,6 +1006,24 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
+}
+
+/* The donut can be dragged/tilted (see OrbitControls in MacroDonut3D), so
+   the hole behind this label isn't a fixed shape — a background disc sized
+   to fit it would misalign the moment the ring rotates. A text halo instead
+   of a filled shape keeps the label readable against any ring color at any
+   angle, with nothing to line up. Uses --ring-halo (an opaque color tuned
+   per theme to match the .log-analytics backdrop this canvas sits on) so
+   the halo blends in instead of showing as a mismatched fringe. */
+.calorie-ring-center strong,
+.calorie-ring-center span {
+  text-shadow:
+    1px 0 0 var(--ring-halo), -1px 0 0 var(--ring-halo),
+    0 1px 0 var(--ring-halo), 0 -1px 0 var(--ring-halo),
+    1px 1px 0 var(--ring-halo), -1px 1px 0 var(--ring-halo),
+    1px -1px 0 var(--ring-halo), -1px -1px 0 var(--ring-halo),
+    0 0 6px var(--ring-halo);
 }
 
 .calorie-ring-center strong {
@@ -1401,6 +1528,7 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--text-sm);
+  color: var(--text);
 }
 
 .food-info-meta {
@@ -1426,6 +1554,27 @@ button {
   border-radius: var(--radius-sm);
   flex-shrink: 0;
   text-align: right;
+}
+
+.qty-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border-strong);
+  color: var(--text);
+  font-size: var(--text-base);
+  line-height: 1;
+  transition: border-color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
+}
+
+.qty-step:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .plan-card .food-list li .food-cal,
@@ -1549,6 +1698,21 @@ button {
   border: 1px solid var(--card-border);
 }
 
+.editor-meal-targets {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+}
+
+.editor-meal-targets .plan-macros {
+  border-top: none;
+  padding-top: 0;
+}
+
 .editor-search {
   position: relative;
 }
@@ -1586,6 +1750,10 @@ body.theme-dark .editor-search input {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.editor-food-item strong {
+  color: var(--text);
 }
 
 .editor-food-item:hover {
@@ -1661,6 +1829,12 @@ body.theme-dark .editor-search input {
   .top-nav {
     margin: calc(var(--space-6) * -1) calc(var(--space-3) * -1) var(--space-4);
     padding: var(--space-3);
+  }
+  .app-footer {
+    margin: var(--space-5) calc(var(--space-3) * -1) calc(var(--space-12) * -1);
+    padding: var(--space-4) var(--space-3);
+    text-align: center;
+    justify-content: center;
   }
   .hero {
     padding: var(--space-5);
