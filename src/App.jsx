@@ -139,11 +139,30 @@ const toMetric = ({ weight, weightUnit, height, heightUnit }) => {
   return { weightKg, heightCm };
 };
 
+// units foods are logged in — each food carries its own real-world serving unit
+// instead of everything being assumed to be grams
+const unitLabels = {
+  g: 'g',
+  ml: 'ml',
+  pc: 'pc',
+  cup: 'cup',
+  tbsp: 'tbsp',
+  tsp: 'tsp',
+  slice: 'slice',
+  scoop: 'scoop',
+  bowl: 'bowl',
+};
+
+const formatServing = (quantity, unit) => `${quantity} ${unitLabels[unit] || unit}`;
+
 // derive calories (kcal) from macros when not provided: 4 kcal/g for protein/carbs, 9 kcal/g for fat
+// baseQty is the reference quantity the macros above are for (in the food's own `unit`,
+// not necessarily grams) — logged/plan amounts scale against that reference, not a flat 100g.
 const foodDatabase = rawFoodDatabase.map((f) => ({
   ...f,
   calories: f.calories ? f.calories : Math.round((Number(f.protein || 0) * 4 + Number(f.carbs || 0) * 4 + Number(f.fat || 0) * 9) * 10) / 10,
-  baseGram: f.baseGram || 100,
+  unit: f.unit || 'g',
+  baseQty: f.quantity || f.baseQty || 100,
 }));
 
 export default function App() {
@@ -301,11 +320,13 @@ export default function App() {
     });
   };
 
-  const getFoodStep = (name) => (foodDatabase.find((d) => d.name === name) || items.find((d) => d.name === name))?.baseGram || 10;
+  const getFoodStep = (name) => (foodDatabase.find((d) => d.name === name) || items.find((d) => d.name === name))?.baseQty || 10;
+
+  const getFoodUnit = (name) => (foodDatabase.find((d) => d.name === name) || items.find((d) => d.name === name))?.unit || 'g';
 
   const getFoodKcal = (name, grams) => {
     const food = foodDatabase.find((d) => d.name === name) || items.find((d) => d.name === name);
-    return Math.round(((food?.calories || 0) * (grams || 0)) / (food?.baseGram || 100));
+    return Math.round(((food?.calories || 0) * (grams || 0)) / (food?.baseQty || 100));
   };
 
   const mealFoodContribution = (meal) => {
@@ -314,7 +335,7 @@ export default function App() {
       (acc, f) => {
         const food = foodDatabase.find((d) => d.name === f.name) || items.find((d) => d.name === f.name);
         if (!food) return acc;
-        const scale = (f.grams || 0) / (food.baseGram || 100);
+        const scale = (f.grams || 0) / (food.baseQty || 100);
         acc.calories += Math.round((food.calories || 0) * scale);
         acc.protein += Math.round((food.protein || 0) * scale * 10) / 10;
         acc.carbs += Math.round((food.carbs || 0) * scale * 10) / 10;
@@ -333,12 +354,14 @@ export default function App() {
       return;
     }
 
-    const grams = food.baseGram || 100;
-    const scale = grams / 100;
+    const grams = food.baseQty || 100;
+    const scale = grams / (food.baseQty || 100);
 
     setSelectedFood(food.name);
     setFoodEntry({
       name: food.name,
+      unit: food.unit,
+      baseQty: food.baseQty,
       grams,
       calories: Math.round((food.calories || 0) * scale),
       protein: Math.round((food.protein || 0) * scale * 10) / 10,
@@ -352,7 +375,7 @@ export default function App() {
     setFoodEntry((prev) => {
       const food = foodDatabase.find((f) => f.name === prev.name);
       if (!food) return { ...prev, grams };
-      const scale = grams / 100;
+      const scale = grams / (food.baseQty || 100);
       return {
         ...prev,
         grams,
@@ -431,8 +454,8 @@ export default function App() {
         fat: Number(foodEntry.fat),
         grams: Number(foodEntry.grams) || 0,
         // logged calories/macros are the total for `grams`, not a per-100g rate —
-        // record that as baseGram so the meal planner scales it correctly.
-        baseGram: Number(foodEntry.grams) || 100,
+        // record that as baseQty so the meal planner scales it correctly.
+        baseQty: Number(foodEntry.grams) || 100,
       },
     ]);
     setFoodEntry({ name: '', calories: '', protein: '', carbs: '', fat: '', grams: 100 });
@@ -518,8 +541,9 @@ export default function App() {
       } else {
         foods.forEach((f) => {
           const food = foodDatabase.find((d) => d.name === f.name) || items.find((d) => d.name === f.name);
-          const kcal = Math.round(((food?.calories || 0) * (f.grams || 0)) / (food?.baseGram || 100));
-          lines.push(`  - ${f.name} (${f.grams}g) — ${kcal} kcal`);
+          const kcal = Math.round(((food?.calories || 0) * (f.grams || 0)) / (food?.baseQty || 100));
+          const unit = unitLabels[food?.unit] || food?.unit || 'g';
+          lines.push(`  - ${f.name} (${f.grams} ${unit}) — ${kcal} kcal`);
         });
         lines.push(`  Subtotal: ${contrib.calories} kcal · P ${contrib.protein}g · C ${contrib.carbs}g · F ${contrib.fat}g`);
       }
@@ -797,7 +821,7 @@ export default function App() {
                   <option value="">Choose from database</option>
                   {foodDatabase.map((food) => (
                     <option key={food.name} value={food.name}>
-                      {food.name}
+                      {food.name} ({formatServing(food.baseQty, food.unit)})
                     </option>
                   ))}
                 </select>
@@ -811,7 +835,7 @@ export default function App() {
                 />
               </label>
               <label className="field-half">
-                Grams
+                Quantity {selectedFood ? `(${unitLabels[getFoodUnit(selectedFood)] || getFoodUnit(selectedFood)})` : '(g)'}
                 <input
                   type="number"
                   min="0"
@@ -870,6 +894,7 @@ export default function App() {
                       <div className="food-row-info">
                         <strong>{item.name}</strong>
                         <div className="food-details">
+                          <span>{formatServing(item.baseQty, item.unit || 'g')}</span>
                           <span>{item.protein || 0}g P</span>
                           <span>{item.carbs || 0}g C</span>
                           <span>{item.fat || 0}g F</span>
@@ -967,7 +992,7 @@ export default function App() {
                           <option value="">— choose —</option>
                           {foodDatabase.map((f) => (
                             <option key={f.name} value={f.name}>
-                              {f.name}
+                              {f.name} ({formatServing(f.baseQty, f.unit)})
                             </option>
                           ))}
                         </select>
@@ -979,7 +1004,7 @@ export default function App() {
                           <option value="">— choose —</option>
                           {items.map((it, i) => (
                             <option key={`${it.name}-${i}`} value={it.name}>
-                              {it.name}
+                              {it.name} ({formatServing(it.baseQty, it.unit || 'g')})
                             </option>
                           ))}
                         </select>
@@ -1017,7 +1042,7 @@ export default function App() {
                                   min={0}
                                   onChange={(e) => updateMealGrams(idx, fi, parseNumberInput(e))}
                                 />
-                                g
+                                {unitLabels[getFoodUnit(f.name)] || getFoodUnit(f.name)}
                                 <button
                                   type="button"
                                   className="qty-step"
@@ -1155,10 +1180,12 @@ export default function App() {
                     <div key={f.name} className="editor-food-item">
                       <div>
                         <strong>{f.name}</strong>
-                        <div className="food-meta">{Math.round(f.calories)} kcal • {f.protein || 0}g P • {f.carbs || 0}g C • {f.fat || 0}g F</div>
+                        <div className="food-meta">
+                          {formatServing(f.baseQty, f.unit)} • {Math.round(f.calories)} kcal • {f.protein || 0}g P • {f.carbs || 0}g C • {f.fat || 0}g F
+                        </div>
                       </div>
                       <div>
-                        <button className="secondary-button" onClick={() => addMealFood(editingMealIndex, f.name, f.baseGram || 100)}>
+                        <button className="secondary-button" onClick={() => addMealFood(editingMealIndex, f.name, f.baseQty || 100)}>
                           <Icon name="plus" size={14} /> Add
                         </button>
                       </div>
@@ -1194,7 +1221,7 @@ export default function App() {
                           −
                         </button>
                         <input type="number" min={0} value={f.grams} onChange={(e) => updateMealGrams(editingMealIndex, fi, parseNumberInput(e))} />
-                        g
+                        {unitLabels[getFoodUnit(f.name)] || getFoodUnit(f.name)}
                         <button
                           type="button"
                           className="qty-step"
